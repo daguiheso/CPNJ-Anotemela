@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/daguiheso/CPNJ-Anotemela",
   "devDependencies": {
+    "body-parser": "^1.9.0",
     "chai": "^1.9.2",
     "express": "^4.9.5",
     "mocha": "^1.21.4",
