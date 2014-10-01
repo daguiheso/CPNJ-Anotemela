@@ -11,6 +11,7 @@ var bodyParser = require('body-parser');
 * Local Variables
 */
 var server = express();
+var db = {};
 /**
 * Middleware
 */
@@ -21,12 +22,26 @@ server.use(bodyParser.json('application/json'));
 server.post('/notas', function(req, res){
 	console.log('POST', req.body.nota);
 	var notaNueva = req.body.nota;
-	notaNueva.id = 123;
+	notaNueva.id = Date.now();//Date.now retorna una fecha en cadena, esto para asegurarnos que sea unico el id
 	
+	db[notaNueva.id] = notaNueva;
+
 	res
 		.status(201)
 		.json({
 			nota: notaNueva
+		});
+});
+
+
+server.get('/notas/:id', function(req, res){
+	console.log('GET /notas/%s', req.params.id); // ver propiedades de request en Doc de express
+	var id = req.params.id; // guardamos id
+	var nota = db[id]; // buscando la nota
+	
+	res		
+		.json({
+			notas: nota
 		});
 });
 
