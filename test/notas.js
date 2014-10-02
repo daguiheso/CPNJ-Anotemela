@@ -1,7 +1,8 @@
-var request = require('supertest');
+var request = require('supertest-as-promised');
 var api = require('../server.js');
 var host = process.env.API_TEST_HOST || api; // para poder correr las pruebas con diferentes host
-var async = require('async');
+
+
 
 request = request(host); //vamos a iniciar nuestra libreria con el servidor
 
@@ -57,35 +58,106 @@ describe('recurso /notas', function(){
 
 			var id;
 
-			async.waterfall([
-				function createNote(cb){
-					request
-						.post('/notas')
-						.set('Accept', 'application/json')
-						.send(data)			
-						.expect(201)												
-						.end(cb)
-				},
-				function getNote(res, cb){
-					id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
+			// Crear nota nueva		
+			request
+				.post('/notas')
+				.set('Accept', 'application/json')
+				.send(data)			
+				.expect(201)
+				.expect('Content-Type', /application\/json/)
 
-					request
+				.then(function getNote(res){  // then recibe dos parametros, el segundo argumento se ejecutara si hay un Error
+					var id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
+
+					return request
 						.get('/notas/' + id)
 						.expect(200)
-						.expect('Content-Type', /application\/json/)
-						.end(cb)
-				},
-				function assertions(res, cb){
-					var nota = res.body.notas;
+						.expect('Content-Type', /application\/json/)			
+				}, done)
+				.then(function assertionsNote(res){  // hasta aqui va la solicitud y pasamos el resultado
+					var nota;
+					var body = res.body;
 
+					// Nota existe
+					expect(body).to.have.property('notas');
+					nota = res.body.notas;
+
+					//Porpiedades
 					expect(nota).to.have.property('title', 'Mejorando.la #node-pro');
 					expect(nota).to.have.property('description', 'Introduccion a clase');
 					expect(nota).to.have.property('type', 'js');
 					expect(nota).to.have.property('body', 'soy el cuerpo de json');
-					expect(nota).to.have.property('id', id); // esperamos que el id sea igual al id de la nota que creamos anteriormente
-					cb();
+					//esperamos que el id sea igual al id de la nota que creamos anteriormente
+					expect(nota).to.have.property('id', id);  
+					done();
+				}, done); // done es el segundo param, para saber si tuve un error				
+		});
+	});
+
+	describe('PUT', function(){
+		it('deberia actualizar una nota existente', function(done){
+			
+			var data =
+			{
+				"nota":{
+					"title": "Mejorando.la #node-pro",
+					"description": "Introduccion a clase",
+					"type": "js",
+					"body": "soy el cuerpo de json"
 				}
-			], done)			
+			};
+
+			var id;
+
+			// crear una nota (POST)		
+			request
+				.post('/notas')
+				.set('Accept', 'application/json')
+				.send(data)		
+				
+
+			// obtener nota creada (GET)
+				.then(function getNote(res){  // then recibe dos parametros, el segundo argumento se ejecutara si hay un Error
+					id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
+
+					return request
+						.get('/notas/' + id)
+						.set('Accept', 'application/json')						
+						.send()									
+				}, done)
+
+
+			// modificar la nota 
+				.then(function updateNote(res){  // hasta aqui va la solicitud y pasamos el resultado					
+					var body = res.body;					
+					expect(body).to.have.property('notas') //Nota existe
+					var notaActulizada = res.body.notas;	
+
+					notaActulizada.title = 'Juan Pablo no sabe escribir ejecicion';
+
+
+			// enviar nota actualizada (PUT)
+					return request
+						.put('/notas/' + id)
+						.send(notaActulizada)	
+						.expect(200)			
+						.expect('Content-Type', /application\/json/)
+				}, done) // done es el segundo param, para saber si tuve un error
+
+
+			// evaluar que la nota se haya actualizado correctamente
+				.then(function assertionsNote(res){
+
+					var nota = res.body.nota;
+					//Porpiedades
+					expect(nota).to.have.property('title', 'Juan Pablo no sabe escribir ejecicion');
+					expect(nota).to.have.property('description', 'Introduccion a clase');
+					expect(nota).to.have.property('type', 'js');
+					expect(nota).to.have.property('body', 'soy el cuerpo de json');
+					//esperamos que el id sea igual al id de la nota que creamos anteriormente
+					expect(nota).to.have.property('id', id);  
+					done();
+				}, done);				
 		});
 	});
 });
