@@ -1,4 +1,4 @@
-var request = require('supertest');
+var request = require('supertest-as-promised');
 var api = require('../server.js');
 var host = process.env.API_TEST_HOST || api; // para poder correr las pruebas con diferentes host
 
@@ -53,7 +53,7 @@ describe('recurso /notas', function(){
 					"body": "soy el cuerpo de json"
 				}
 			};
-
+			var id;
 			// Crear nota nueva		
 			request
 				.post('/notas')
@@ -61,26 +61,24 @@ describe('recurso /notas', function(){
 				.send(data)			
 				.expect(201)
 				.expect('Content-Type', /application\/json/)
-
-				//despues de evaluar que se creo, evaluaremos que exista
-				.end(function(err, res){  //cundo se crea nota, aqui responden con una solicitud
+				.then(function(res){	// then recibe dos parametros, el segundo argumento se ejecutara si hay un error	
 					var id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
 
-					request
+					return request
 						.get('/notas/' + id)
 						.expect(200)
 						.expect('Content-Type', /application\/json/)
-						.end(function(err, res){
-							var nota = res.body.notas;
-							expect(nota).to.have.property('title', 'Mejorando.la #node-pro');
-							expect(nota).to.have.property('description', 'Introduccion a clase');
-							expect(nota).to.have.property('type', 'js');
-							expect(nota).to.have.property('body', 'soy el cuerpo de json');
-							//esperamos que el id sea igual al id de la nota que creamos anteriormente
-							expect(nota).to.have.property('id', id);  
-							done();																							
-						});
-				});	
+					}, done)
+				.then(function(res){ // hasta aqui va la solicitud y pasamos el resultado						
+					var nota = res.body.notas;
+					expect(nota).to.have.property('title', 'Mejorando.la #node-pro');
+					expect(nota).to.have.property('description', 'Introduccion a clase');
+					expect(nota).to.have.property('type', 'js');
+					expect(nota).to.have.property('body', 'soy el cuerpo de json');
+					//esperamos que el id sea igual al id de la nota que creamos anteriormente
+					expect(nota).to.have.property('id', id);  
+					done();		
+				}, done);	// done es el segundo param, para saber si tuve un error
 			});
 	});
 });
