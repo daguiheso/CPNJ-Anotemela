@@ -1,6 +1,7 @@
-var request = require('supertest-as-promised');
+var request = require('supertest');
 var api = require('../server.js');
 var host = process.env.API_TEST_HOST || api; // para poder correr las pruebas con diferentes host
+var async = require('async');
 
 request = request(host); //vamos a iniciar nuestra libreria con el servidor
 
@@ -53,32 +54,38 @@ describe('recurso /notas', function(){
 					"body": "soy el cuerpo de json"
 				}
 			};
-			var id;
-			// Crear nota nueva		
-			request
-				.post('/notas')
-				.set('Accept', 'application/json')
-				.send(data)			
-				.expect(201)
-				.expect('Content-Type', /application\/json/)
-				.then(function(res){	// then recibe dos parametros, el segundo argumento se ejecutara si hay un error	
-					var id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
 
-					return request
+			var id;
+
+			async.waterfall([
+				function createNote(cb){
+					request
+						.post('/notas')
+						.set('Accept', 'application/json')
+						.send(data)			
+						.expect(201)												
+						.end(cb)
+				},
+				function getNote(res, cb){
+					id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
+
+					request
 						.get('/notas/' + id)
 						.expect(200)
 						.expect('Content-Type', /application\/json/)
-					}, done)
-				.then(function(res){ // hasta aqui va la solicitud y pasamos el resultado						
+						.end(cb)
+				},
+				function assertions(res, cb){
 					var nota = res.body.notas;
+
 					expect(nota).to.have.property('title', 'Mejorando.la #node-pro');
 					expect(nota).to.have.property('description', 'Introduccion a clase');
 					expect(nota).to.have.property('type', 'js');
 					expect(nota).to.have.property('body', 'soy el cuerpo de json');
-					//esperamos que el id sea igual al id de la nota que creamos anteriormente
-					expect(nota).to.have.property('id', id);  
-					done();		
-				}, done);	// done es el segundo param, para saber si tuve un error
-			});
+					expect(nota).to.have.property('id', id); // esperamos que el id sea igual al id de la nota que creamos anteriormente
+					cb();
+				}
+			], done)			
+		});
 	});
 });
