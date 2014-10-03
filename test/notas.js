@@ -227,4 +227,47 @@ describe('recurso /notas', function(){
 	// 			}, done);				
 	// 	});
 	// });
+
+	describe('DELETE', function(){
+		it('deberia eliminar una nota existente', function(done){
+			// Crear nota nueva
+			var data =
+			{
+				"nota":{
+					"title": "Mejorando.la #node-pro",
+					"description": "Introduccion a clase",
+					"type": "js",
+					"body": "soy el cuerpo de json"
+				}
+			};
+
+			var id;
+
+			// Crear nota nueva		
+			request
+				.post('/notas')
+				.set('Accept', 'application/json')
+				.send(data)			
+				.expect(201)
+				.expect('Content-Type', /application\/json/)
+
+				// Eliminamos nota existente
+				.then(function deleteNote(res){  // then recibe dos parametros, el segundo argumento se ejecutara si hay un Error
+					var id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
+
+					return request
+						.put('/notas/' + id)
+						.expect(204)								
+				}, done)
+
+				// Confirmar que la nota no existe
+				.then(function assertNoteDestroyed(res){
+
+					return request
+						.get('/notas' + id)
+						.expect(400)
+						done();
+				}, done);				
+		});
+	});
 });
