@@ -256,18 +256,19 @@ describe('recurso /notas', function(){
 					var id = res.body.nota.id; //guardamos el id porque vamos a uerer solicitar la misma nota que acabamos de crear
 
 					return request
-						.put('/notas/' + id)
+						.delete('/notas/' + id)
 						.expect(204)								
 				}, done)
 
 				// Confirmar que la nota no existe
 				.then(function assertNoteDestroyed(res){
-
 					return request
-						.get('/notas' + id)
-						.expect(400)
-						done();
-				}, done);				
+						.get('/notas/' + id)
+						.expect(400);						
+				}, done)
+				.then(function(){
+					done();
+				});			
 		});
 	});
 });
